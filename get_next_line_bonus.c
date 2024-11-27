@@ -1,16 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*   get_next_line_bonus.c                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mpiantan <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/11/25 17:39:04 by mpiantan          #+#    #+#             */
-/*   Updated: 2024/11/27 17:08:09 by mpiantan         ###   ########.fr       */
+/*   Updated: 2024/11/27 17:43:28 by mpiantan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "get_next_line.h"
+#include "get_next_line_bonus.h"
 
 void	reset_list(t_list **list)
 {
@@ -93,16 +93,16 @@ void	create_list(t_list **list, int fd)
 
 char	*get_next_line(int fd)
 {
-	static t_list	*list = NULL;
+	static t_list	*list[1024];
 	char			*next_line;
 
-	if (fd < 0 || BUFFER_SIZE <= 0)
+	if (fd < 0 || fd < 0 || fd > 1023)
 		return (NULL);
-	create_list (&list, fd);
-	if (!list)
+	create_list (&list[fd], fd);
+	if (!list[fd])
 		return (NULL);
-	next_line = get_line (list);
-	reset_list(&list);
+	next_line = get_line (list[fd]);
+	reset_list(&list[fd]);
 	return (next_line);
 }
 
@@ -110,27 +110,74 @@ char	*get_next_line(int fd)
 
 int	main(int argc, char **argv)
 {
-	int	fd;
-	char	*line;
-	int	nbr;
+	int	*fd;
+	char	**lines;
+	int	*finished;
+	int	total_files;
+	int	i;
+	int	all_finished;	
 
-	nbr = 1;
-	if (argc != 2)
+	if (argc < 2)
 	{
-		printf("Usage: %s <file>\n", argv[0]);
+		printf("Usage: %s <file1> <file2> ... <fileN>\n", argv[0]);
 		return (1);
 	}
-	fd = open (argv[1], O_RDONLY);
-	if (fd < 0)
+	total_files = argc - 1;
+	fd = malloc(sizeof(int) * total_files);
+	lines = malloc(sizeof(char *) * total_files);
+	finished = malloc(sizeof(int) * total_files);
+	if (!fd || !lines || !finished)
 	{
-		printf("Error opening file");
+		printf("Memory allocation error. \n");
 		return (1);
 	}
-	while ((line = get_next_line(fd)) != NULL)
+	i = 0;
+	while (i < total_files)
 	{
-		printf("%d->%s", nbr++, line);
-		free(line);
+		fd[i] = open (argv[i + 1], O_RDONLY);
+		if (fd < 0)
+		{
+			printf("Error opening file: %s\n", argv[i + 1]);
+			while (--i >= 0)
+				close(fd[i]);
+			free(fd);
+			free(lines);
+			free(finished);
+			return (1);
+		}
+		lines[i] = NULL;
+		finished[i] = 0;
+		i++;
 	}
-	close(fd);
+	all_finished = 0;
+	while (!all_finished)
+	{
+		all_finished = 1;
+		i = 0;
+		while (i < total_files)
+		{
+			if (!finished[i] && (lines[i] = get_next_line(fd[i])))
+			{
+				printf("File %d->%s", i + 1, lines[i]);
+				free(lines[i]);
+				all_finished = 0;
+			}
+			else if (!finished[i])
+			{
+				finished[i] = 1;
+			}
+			i++;
+		}
+	}
+	i = 0;
+	while (i < total_files)
+	{
+		close(fd[i]);
+		i++;
+	}
+	free(fd);
+	free(lines);
+	free(finished);
+
 	return (0);
 }*/
